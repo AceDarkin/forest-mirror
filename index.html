@@ -313,6 +313,17 @@
   <!-- GAME -->
   <div id="game-screen" class="screen">
 
+    <!-- Phase 0: Who are you? -->
+    <div id="phase-picker" class="hidden">
+      <div class="card">
+        <div class="card-label">🌿 Before We Begin</div>
+        <p style="font-size:15px;color:var(--text-dim);font-style:italic;margin-bottom:20px;line-height:1.6;">
+          Who is sitting at the screen right now? This helps personalise your questions.
+        </p>
+        <div id="picker-buttons" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;"></div>
+      </div>
+    </div>
+
     <!-- Phase 1: Self answers -->
     <div id="phase-self" class="hidden">
       <div class="phase-step-indicator">
@@ -325,13 +336,14 @@
         <div class="subject-badge">
           <span class="crown">♛</span>
           <span class="sname" id="self-player-name">Player</span>
+          <span id="self-you-tag" class="hidden" style="font-size:10px;background:rgba(201,168,76,0.2);border:1px solid rgba(201,168,76,0.4);border-radius:10px;padding:2px 8px;color:var(--gold-light);font-family:'Cinzel Decorative',serif;letter-spacing:1px;">you</span>
         </div>
         <div class="phase-banner">
           <span>🔒</span>
           <span><strong id="self-player-name2">Player</strong> — answer privately. Everyone else, look away!</span>
         </div>
         <div id="self-questions-form"></div>
-        <div class="redflag-zone">
+        <div class="redflag-zone" id="self-redflag-zone">
           <div class="redflag-title">🚩 The Red Flag in Me</div>
           <p style="font-size:13px;color:var(--text-dim);font-style:italic;margin-bottom:12px;line-height:1.6;">Not about shame — about self-awareness. One thing you know you're working on.</p>
           <label>My red flag</label>
@@ -462,6 +474,7 @@ let guessAnswers = {};
 let selfPhaseIdx = 0;
 let guessPhaseIdx = 0;
 let revealIdx = 0;
+let currentUserName = null; // the person sitting at the screen
 
 // ========== FIREFLIES ==========
 (function(){
@@ -555,7 +568,7 @@ function showScreen(id){
   document.getElementById(id).classList.add('active');
 }
 function showPhase(id){
-  ['phase-self','phase-guesses','phase-reveal'].forEach(p=>document.getElementById(p).classList.add('hidden'));
+  ['phase-picker','phase-self','phase-guesses','phase-reveal'].forEach(p=>document.getElementById(p).classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
 }
 
@@ -564,24 +577,75 @@ function startGame(){
   if(players.length<2){showToast('Add at least 2 players');return;}
   if(questions.length===0){showToast('Add at least one question');return;}
   selfAnswers={}; guessAnswers={};
-  selfPhaseIdx=0; guessPhaseIdx=0; revealIdx=0;
+  selfPhaseIdx=0; guessPhaseIdx=0; revealIdx=0; currentUserName=null;
   showScreen('game-screen');
+  showPickerPhase();
+}
+
+function showPickerPhase(){
+  ['phase-picker','phase-self','phase-guesses','phase-reveal'].forEach(p=>document.getElementById(p).classList.add('hidden'));
+  document.getElementById('phase-picker').classList.remove('hidden');
+  const btns=document.getElementById('picker-buttons');
+  btns.innerHTML=players.map(p=>`
+    <button class="btn btn-ghost" style="font-family:'Crimson Pro',serif;font-size:15px;letter-spacing:0;text-transform:none;padding:10px 20px;" onclick="selectCurrentUser('${escAttr(p)}')">
+      🌿 ${esc(p)}
+    </button>
+  `).join('');
+}
+
+function selectCurrentUser(name){
+  currentUserName=name;
+  // Put currentUser first in self phase order
+  const others=players.filter(p=>p!==name);
+  const orderedPlayers=[name,...others];
+  // Reorder selfPhaseIdx to use orderedPlayers
+  window._selfOrder=orderedPlayers;
+  selfPhaseIdx=0;
+  showToast(`Welcome, ${name}! 🌿`);
   startSelfPhase();
+}
+
+// Helper: personalise question label based on whose turn it is
+function phraseQuestion(q, subjectName){
+  const isCurrentUser = subjectName === currentUserName;
+  if(isCurrentUser) return q; // "What MBTI type am I?" — already first-person
+  // Replace "I am" → "[Name] is", "I would" → "[Name] would", "my" → "[Name]'s", "I'm" → "[Name] is"
+  const first = subjectName.split(' ')[0];
+  return q
+    .replace(/\bI am\b/gi, `${first} is`)
+    .replace(/\bI'm\b/gi, `${first} is`)
+    .replace(/\bI would\b/gi, `${first} would`)
+    .replace(/\bdo you think I\b/gi, `do you think ${first}`)
+    .replace(/\bfits me\b/gi, `fits ${first}`)
+    .replace(/\bmy\b/gi, `${first}'s`)
+    .replace(/\bme\b/gi, first);
 }
 
 // ========== PHASE 1: SELF ==========
 function startSelfPhase(){
-  const player=players[selfPhaseIdx];
-  document.getElementById('self-player-name').textContent=player;
-  document.getElementById('self-player-name2').textContent=player;
-  document.getElementById('self-redflag').value='';
-  document.getElementById('self-progress-label').textContent=`Player ${selfPhaseIdx+1} of ${players.length}`;
+  const order = window._selfOrder || players;
+  const player = order[selfPhaseIdx];
+  const isMe = player === currentUserName;
 
-  const form=document.getElementById('self-questions-form');
-  form.innerHTML=questions.map((q,i)=>`
+  document.getElementById('self-player-name').textContent = player;
+  document.getElementById('self-player-name2').textContent = player;
+  document.getElementById('self-redflag').value = '';
+  document.getElementById('self-progress-label').textContent = `Player ${selfPhaseIdx+1} of ${order.length}`;
+
+  // Show/hide "you" tag
+  const youTag = document.getElementById('self-you-tag');
+  youTag.classList.toggle('hidden', !isMe);
+
+  // Show/hide red flag zone
+  const rfZone = document.getElementById('self-redflag-zone');
+  rfZone.classList.toggle('hidden', !isMe);
+
+  // Build questions with personalised phrasing
+  const form = document.getElementById('self-questions-form');
+  form.innerHTML = questions.map((q,i) => `
     <div class="answer-block">
-      <label>${esc(q)}</label>
-      <textarea id="self-q-${i}" placeholder="Your honest answer..." rows="2"></textarea>
+      <label>${esc(phraseQuestion(q, player))}</label>
+      <textarea id="self-q-${i}" placeholder="${isMe ? 'Your honest answer...' : `What would ${esc(player.split(' ')[0])} say?...`}" rows="2"></textarea>
     </div>
   `).join('');
 
@@ -589,44 +653,54 @@ function startSelfPhase(){
 }
 
 function lockSelfAnswers(){
-  const player=players[selfPhaseIdx];
-  const answers={};
+  const order = window._selfOrder || players;
+  const player = order[selfPhaseIdx];
+  const isMe = player === currentUserName;
+  const answers = {};
+
   for(let i=0;i<questions.length;i++){
     const val=document.getElementById(`self-q-${i}`).value.trim();
     if(!val){showToast('Please answer all questions ✦');return;}
     answers[i]=val;
   }
-  const redFlag=document.getElementById('self-redflag').value.trim();
-  if(!redFlag){showToast('Write your red flag too 🚩');return;}
 
-  selfAnswers[player]={answers,redFlag};
+  let redFlag = '';
+  if(isMe){
+    redFlag = document.getElementById('self-redflag').value.trim();
+    if(!redFlag){showToast('Write your red flag too 🚩');return;}
+  }
+
+  selfAnswers[player]={answers, redFlag};
   selfPhaseIdx++;
 
-  if(selfPhaseIdx<players.length){
+  if(selfPhaseIdx < order.length){
     showToast(`${player}'s answers sealed 🔒`);
     startSelfPhase();
   } else {
     showToast('All sealed! Now for the guesses ✨');
     guessPhaseIdx=0;
+    // Reset guess order to match _selfOrder
+    window._guessOrder = [...(window._selfOrder || players)];
     startGuessPhase();
   }
 }
 
 // ========== PHASE 2: GUESSES ==========
 function startGuessPhase(){
-  const guesser=players[guessPhaseIdx];
-  const others=players.filter(p=>p!==guesser);
-  document.getElementById('guess-player-name').textContent=guesser;
-  document.getElementById('guess-player-name2').textContent=guesser;
-  document.getElementById('guess-progress-label').textContent=`Player ${guessPhaseIdx+1} of ${players.length}`;
+  const order = window._guessOrder || players;
+  const guesser = order[guessPhaseIdx];
+  const others = players.filter(p=>p!==guesser);
+  document.getElementById('guess-player-name').textContent = guesser;
+  document.getElementById('guess-player-name2').textContent = guesser;
+  document.getElementById('guess-progress-label').textContent = `Player ${guessPhaseIdx+1} of ${order.length}`;
 
-  const form=document.getElementById('guess-form');
-  form.innerHTML=others.map(target=>`
+  const form = document.getElementById('guess-form');
+  form.innerHTML = others.map(target => `
     <div class="guess-section">
       <div class="guess-section-title">🌿 ${esc(target)}</div>
-      ${questions.map((q,i)=>`
+      ${questions.map((q,i) => `
         <div class="answer-block">
-          <label>${esc(q)}</label>
+          <label>${esc(phraseQuestion(q, target))}</label>
           <textarea id="guess-${escId(target)}-${i}" placeholder="What would ${esc(target.split(' ')[0])} say?..." rows="2"></textarea>
         </div>
       `).join('')}
@@ -637,7 +711,8 @@ function startGuessPhase(){
 }
 
 function lockGuesses(){
-  const guesser=players[guessPhaseIdx];
+  const order = window._guessOrder || players;
+  const guesser = order[guessPhaseIdx];
   const others=players.filter(p=>p!==guesser);
   const guesses={};
 
@@ -653,7 +728,7 @@ function lockGuesses(){
   guessAnswers[guesser]=guesses;
   guessPhaseIdx++;
 
-  if(guessPhaseIdx<players.length){
+  if(guessPhaseIdx < order.length){
     showToast(`${guesser}'s guesses sealed 🔒`);
     startGuessPhase();
   } else {
@@ -751,6 +826,7 @@ function nextReveal(){
 function resetGame(){
   selfAnswers={}; guessAnswers={};
   selfPhaseIdx=0; guessPhaseIdx=0; revealIdx=0;
+  currentUserName=null; window._selfOrder=null; window._guessOrder=null;
   renderPlayers(); renderQuestions();
   showScreen('setup-screen');
 }
@@ -885,6 +961,7 @@ function esc(str){
   if(!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+function escAttr(str){ return String(str||'').replace(/'/g,"\\'"); }
 function escId(str){ return String(str).replace(/[^a-z0-9]/gi,'_'); }
 </script>
 </body>
