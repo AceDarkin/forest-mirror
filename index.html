@@ -409,14 +409,12 @@
     <div class="card">
       <div class="round-summary">
         <div style="font-size:40px;margin-bottom:16px;">🌿</div>
-        <h2>The Forest Has Spoken</h2>
-        <p>All reflections have been revealed. The mirror knows you now.</p>
+        <h2>Your answers are sealed</h2>
+        <p>Your reflections have been sent to the forest. Come back when everyone is ready for the reveal!</p>
         <p style="font-size:13px;color:var(--glow-green);margin-bottom:24px;">✦ Answers saved to Google Sheets</p>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
           <a href="https://docs.google.com/spreadsheets/d/10Uto4gXRvIH0YGDMIbqc5xSrkLts-ytzqZm3c1FV400/edit" target="_blank" class="btn btn-ghost">📊 View Answers Sheet</a>
-          <button class="btn btn-ghost" onclick="showScreen('history-screen');renderHistory();">📜 View History</button>
-          <button class="btn btn-ghost" onclick="exportLatestCSV()">⬇ Export CSV</button>
-          <button class="btn btn-gold" onclick="resetGame()">✦ Play Again</button>
+          <button class="btn btn-gold" onclick="resetGame()">✦ Start Over</button>
         </div>
       </div>
     </div>
@@ -666,29 +664,20 @@ async function submitToSheet(playerName) {
   }
 }
 function startSelfPhase(){
-  const order = window._selfOrder || players;
-  const player = order[selfPhaseIdx];
-  const isMe = player === currentUserName;
+  const player = currentUserName;
 
   document.getElementById('self-player-name').textContent = player;
   document.getElementById('self-player-name2').textContent = player;
   document.getElementById('self-redflag').value = '';
-  document.getElementById('self-progress-label').textContent = `Player ${selfPhaseIdx+1} of ${order.length}`;
+  document.getElementById('self-progress-label').textContent = '';
+  document.getElementById('self-you-tag').classList.remove('hidden');
+  document.getElementById('self-redflag-zone').classList.remove('hidden');
 
-  // Show/hide "you" tag
-  const youTag = document.getElementById('self-you-tag');
-  youTag.classList.toggle('hidden', !isMe);
-
-  // Show/hide red flag zone
-  const rfZone = document.getElementById('self-redflag-zone');
-  rfZone.classList.toggle('hidden', !isMe);
-
-  // Build questions with personalised phrasing
   const form = document.getElementById('self-questions-form');
   form.innerHTML = questions.map((q,i) => `
     <div class="answer-block">
-      <label>${esc(phraseQuestion(q, player))}</label>
-      <textarea id="self-q-${i}" placeholder="${isMe ? 'Your honest answer...' : `What would ${esc(player.split(' ')[0])} say?...`}" rows="2"></textarea>
+      <label>${esc(q)}</label>
+      <textarea id="self-q-${i}" placeholder="Your honest answer..." rows="2"></textarea>
     </div>
   `).join('');
 
@@ -696,9 +685,7 @@ function startSelfPhase(){
 }
 
 function lockSelfAnswers(){
-  const order = window._selfOrder || players;
-  const player = order[selfPhaseIdx];
-  const isMe = player === currentUserName;
+  const player = currentUserName;
   const answers = {};
 
   for(let i=0;i<questions.length;i++){
@@ -707,35 +694,24 @@ function lockSelfAnswers(){
     answers[i]=val;
   }
 
-  let redFlag = '';
-  if(isMe){
-    redFlag = document.getElementById('self-redflag').value.trim();
-    if(!redFlag){showToast('Write your red flag too 🚩');return;}
-  }
+  const redFlag = document.getElementById('self-redflag').value.trim();
+  if(!redFlag){showToast('Write your red flag too 🚩');return;}
 
   selfAnswers[player]={answers, redFlag};
-  selfPhaseIdx++;
-
-  if(selfPhaseIdx < order.length){
-    showToast(`${player}'s answers sealed 🔒`);
-    startSelfPhase();
-  } else {
-    showToast('All sealed! Now for the guesses ✨');
-    guessPhaseIdx=0;
-    // Reset guess order to match _selfOrder
-    window._guessOrder = [...(window._selfOrder || players)];
-    startGuessPhase();
-  }
+  showToast(`Answers sealed! Now guess for everyone else ✨`);
+  guessPhaseIdx=0;
+  window._guessOrder = players.filter(p => p !== currentUserName);
+  startGuessPhase();
 }
 
 // ========== PHASE 2: GUESSES ==========
 function startGuessPhase(){
-  const order = window._guessOrder || players;
-  const guesser = order[guessPhaseIdx];
-  const others = players.filter(p=>p!==guesser);
+  const guesser = currentUserName;
+  const others = players.filter(p => p !== guesser);
+
   document.getElementById('guess-player-name').textContent = guesser;
   document.getElementById('guess-player-name2').textContent = guesser;
-  document.getElementById('guess-progress-label').textContent = `Player ${guessPhaseIdx+1} of ${order.length}`;
+  document.getElementById('guess-progress-label').textContent = '';
 
   const form = document.getElementById('guess-form');
   form.innerHTML = others.map(target => `
@@ -754,35 +730,23 @@ function startGuessPhase(){
 }
 
 function lockGuesses(){
-  const order = window._guessOrder || players;
-  const guesser = order[guessPhaseIdx];
-  const others=players.filter(p=>p!==guesser);
-  const guesses={};
+  const guesser = currentUserName;
+  const others = players.filter(p => p !== guesser);
+  const guesses = {};
 
   for(const target of others){
-    guesses[target]={};
+    guesses[target] = {};
     for(let i=0;i<questions.length;i++){
-      const val=document.getElementById(`guess-${escId(target)}-${i}`).value.trim();
+      const val = document.getElementById(`guess-${escId(target)}-${i}`).value.trim();
       if(!val){showToast(`Fill in all answers for ${target} ✦`);return;}
-      guesses[target][i]=val;
+      guesses[target][i] = val;
     }
   }
 
-  guessAnswers[guesser]=guesses;
-
-  // Submit this player's full answers to Google Sheets
+  guessAnswers[guesser] = guesses;
   submitToSheet(guesser);
-
-  guessPhaseIdx++;
-
-  if(guessPhaseIdx < order.length){
-    showToast(`${guesser}'s guesses sealed 🔒`);
-    startGuessPhase();
-  } else {
-    showToast('All guesses in! Time for the big reveal 🔮');
-    revealIdx=0;
-    startReveal();
-  }
+  showToast('All submitted! 🌿');
+  showScreen('end-screen');
 }
 
 // ========== PHASE 3: REVEAL ==========
