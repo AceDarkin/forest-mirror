@@ -411,7 +411,9 @@
         <div style="font-size:40px;margin-bottom:16px;">🌿</div>
         <h2>The Forest Has Spoken</h2>
         <p>All reflections have been revealed. The mirror knows you now.</p>
+        <p style="font-size:13px;color:var(--glow-green);margin-bottom:24px;">✦ Answers saved to Google Sheets</p>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <a href="https://docs.google.com/spreadsheets/d/10Uto4gXRvIH0YGDMIbqc5xSrkLts-ytzqZm3c1FV400/edit" target="_blank" class="btn btn-ghost">📊 View Answers Sheet</a>
           <button class="btn btn-ghost" onclick="showScreen('history-screen');renderHistory();">📜 View History</button>
           <button class="btn btn-ghost" onclick="exportLatestCSV()">⬇ Export CSV</button>
           <button class="btn btn-gold" onclick="resetGame()">✦ Play Again</button>
@@ -621,7 +623,48 @@ function phraseQuestion(q, subjectName){
     .replace(/\bme\b/gi, first);
 }
 
-// ========== PHASE 1: SELF ==========
+// ========== GOOGLE SHEETS ==========
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwamf6OJ3cdRUpDaZgODHMzwofFMX4YWAGnu9wvoHWqd9bGMnyyT2YUHk9DmE_jPO3s/exec';
+
+async function submitToSheet(playerName) {
+  const rows = [];
+  const timestamp = new Date().toISOString();
+
+  // Self answers
+  const self = selfAnswers[playerName];
+  if (self) {
+    questions.forEach((q, i) => {
+      rows.push({ player: playerName, type: 'Self Answer', question: q, answer: self.answers[i] || '' });
+    });
+    if (self.redFlag) {
+      rows.push({ player: playerName, type: 'Red Flag', question: '🚩 Red Flag in Me', answer: self.redFlag });
+    }
+  }
+
+  // This player's guesses about others
+  const guesses = guessAnswers[playerName];
+  if (guesses) {
+    for (const target of Object.keys(guesses)) {
+      questions.forEach((q, i) => {
+        rows.push({ player: playerName, type: `Guess for ${target}`, question: q, answer: guesses[target][i] || '' });
+      });
+    }
+  }
+
+  if (rows.length === 0) return;
+
+  try {
+    await fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows })
+    });
+    console.log(`${playerName} submitted to sheet ✓`);
+  } catch(e) {
+    console.warn('Sheet submit failed', e);
+  }
+}
 function startSelfPhase(){
   const order = window._selfOrder || players;
   const player = order[selfPhaseIdx];
@@ -726,6 +769,10 @@ function lockGuesses(){
   }
 
   guessAnswers[guesser]=guesses;
+
+  // Submit this player's full answers to Google Sheets
+  submitToSheet(guesser);
+
   guessPhaseIdx++;
 
   if(guessPhaseIdx < order.length){
