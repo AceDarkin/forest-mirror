@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Forest Mirror ✦ A Game of Reflections</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --forest-deep: #0d1a12;
+    --moss: #2d5c3e;
+    --fern: #3d7a52;
+    --glow-green: #6fcf8a;
+    --wisp: #a8e6bc;
+    --gold: #c9a84c;
+    --gold-light: #e8c96b;
+    --text-main: #d4ead9;
+    --text-dim: #7aaa89;
+    --red-dark: rgba(80,20,20,0.45);
+    --red-border: rgba(220,80,80,0.25);
+    --red-text: #f0c0c0;
+    --red-label: #e07070;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:var(--forest-deep); color:var(--text-main);
+    font-family:'Crimson Pro',serif; min-height:100vh; overflow-x:hidden; position:relative;
+  }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 80%,rgba(45,92,62,.3) 0%,transparent 60%),
+      radial-gradient(ellipse 40% 60% at 80% 20%,rgba(29,65,42,.25) 0%,transparent 60%),
+      radial-gradient(ellipse 80% 30% at 50% 100%,rgba(13,26,18,.8) 0%,transparent 50%);
+    pointer-events:none; z-index:0;
+  }
+  .fireflies { position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden; }
+  .firefly {
+    position:absolute; width:3px; height:3px; border-radius:50%;
+    background:var(--glow-green); box-shadow:0 0 6px 2px rgba(111,207,138,.6);
+    animation:ffloat var(--dur) ease-in-out infinite var(--delay); opacity:0;
+  }
+  @keyframes ffloat {
+    0%,100%{opacity:0;transform:translate(0,0) scale(.5)}
+    20%{opacity:1} 50%{opacity:.8;transform:translate(var(--dx),var(--dy)) scale(1.2)} 80%{opacity:.4}
+  }
+  .container { position:relative; z-index:2; max-width:780px; margin:0 auto; padding:32px 20px 80px; }
+
+  /* Header */
+  .header { text-align:center; margin-bottom:40px; animation:fadeDown .8s ease forwards; }
+  .eyebrow { font-family:'Cinzel Decorative',serif; font-size:10px; letter-spacing:4px; color:var(--gold); margin-bottom:10px; }
+  .header h1 { font-family:'Cinzel Decorative',serif; font-size:clamp(20px,5vw,34px); color:var(--wisp); line-height:1.2; text-shadow:0 0 40px rgba(168,230,188,.3); }
+  .subtitle { font-style:italic; color:var(--text-dim); font-size:16px; margin-top:8px; }
+  .divider { display:flex; align-items:center; gap:12px; margin:14px 0; justify-content:center; }
+  .divider-line { width:60px; height:1px; background:linear-gradient(90deg,transparent,var(--gold),transparent); }
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(16px)}  to{opacity:1;transform:translateY(0)} }
+
+  /* Card */
+  .card {
+    background:linear-gradient(135deg,rgba(26,51,38,.7),rgba(13,26,18,.8));
+    border:1px solid rgba(111,207,138,.15); border-radius:12px; padding:28px;
+    margin-bottom:20px; backdrop-filter:blur(8px);
+    box-shadow:0 4px 32px rgba(0,0,0,.4),inset 0 1px 0 rgba(168,230,188,.05);
+    animation:fadeUp .5s ease forwards; opacity:0;
+  }
+  .card:nth-child(1){animation-delay:.1s}.card:nth-child(2){animation-delay:.2s}.card:nth-child(3){animation-delay:.3s}
+  .card-label {
+    font-family:'Cinzel Decorative',serif; font-size:10px; letter-spacing:3px; color:var(--gold);
+    text-transform:uppercase; margin-bottom:16px; display:flex; align-items:center; gap:8px;
+  }
+  .card-label::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,rgba(201,168,76,.3),transparent); }
+
+  /* Inputs */
+  label { display:block; font-size:13px; color:var(--text-dim); margin-bottom:6px; letter-spacing:.5px; }
+  input,textarea {
+    width:100%; background:rgba(13,26,18,.8); border:1px solid rgba(111,207,138,.2);
+    border-radius:8px; color:var(--text-main); font-family:'Crimson Pro',serif;
+    font-size:15px; padding:10px 14px; transition:border-color .2s,box-shadow .2s; outline:none;
+  }
+  input:focus,textarea:focus { border-color:rgba(111,207,138,.5); box-shadow:0 0 0 3px rgba(111,207,138,.08); }
+  textarea { resize:vertical; min-height:70px; }
+
+  /* Buttons */
+  .btn {
+    font-family:'Cinzel Decorative',serif; font-size:11px; letter-spacing:2px;
+    padding:11px 24px; border-radius:8px; cursor:pointer; border:none; transition:all .25s; text-transform:uppercase;
+  }
+  .btn-primary { background:linear-gradient(135deg,var(--moss),var(--fern)); color:var(--wisp); box-shadow:0 2px 16px rgba(61,122,82,.4); }
+  .btn-primary:hover { background:linear-gradient(135deg,var(--fern),#4d9462); box-shadow:0 4px 24px rgba(61,122,82,.6); transform:translateY(-1px); }
+  .btn-gold { background:linear-gradient(135deg,var(--gold),var(--gold-light)); color:var(--forest-deep); box-shadow:0 2px 16px rgba(201,168,76,.3); }
+  .btn-gold:hover { box-shadow:0 4px 24px rgba(201,168,76,.5); transform:translateY(-1px); }
+  .btn-ghost { background:transparent; border:1px solid rgba(111,207,138,.3); color:var(--glow-green); }
+  .btn-ghost:hover { border-color:rgba(111,207,138,.6); background:rgba(111,207,138,.05); }
+  .btn-sm { padding:7px 16px; font-size:9px; }
+  .btn-row { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap; }
+
+  /* Player tags */
+  .player-tags { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .player-tag {
+    background:rgba(45,92,62,.4); border:1px solid rgba(111,207,138,.25); border-radius:20px;
+    padding:4px 14px; font-size:13px; color:var(--wisp); display:flex; align-items:center; gap:6px; transition:all .2s;
+  }
+  .player-tag:hover { background:rgba(45,92,62,.7); }
+  .player-tag .remove { color:var(--text-dim); font-size:16px; line-height:1; cursor:pointer; transition:color .2s; }
+  .player-tag .remove:hover { color:#ff7a7a; }
+  .add-row { display:flex; gap:8px; margin-top:10px; }
+  .add-row input { flex:1; }
+
+  /* Subject badge */
+  .subject-badge {
+    display:inline-flex; align-items:center; gap:8px;
+    background:linear-gradient(135deg,rgba(45,92,62,.5),rgba(29,65,42,.4));
+    border:1px solid rgba(201,168,76,.3); border-radius:30px; padding:8px 20px; margin-bottom:18px;
+  }
+  .subject-badge .crown { color:var(--gold); font-size:16px; }
+  .subject-badge .sname { font-family:'Cinzel Decorative',serif; font-size:13px; color:var(--gold-light); }
+
+  /* Phase banner */
+  .phase-banner {
+    display:flex; align-items:center; gap:10px;
+    background:rgba(13,26,18,.6); border:1px solid rgba(111,207,138,.1);
+    border-radius:8px; padding:10px 16px; margin-bottom:18px; font-size:13px; color:var(--text-dim);
+  }
+
+  /* Progress */
+  .progress-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; gap:12px; }
+  .progress-bar { flex:1; height:4px; background:rgba(111,207,138,.1); border-radius:2px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--moss),var(--glow-green)); border-radius:2px; transition:width .5s ease; box-shadow:0 0 8px rgba(111,207,138,.4); }
+  .progress-label { font-size:12px; color:var(--text-dim); white-space:nowrap; }
+
+  /* Question text */
+  .question-text { font-size:18px; line-height:1.5; color:var(--wisp); margin-bottom:20px; font-style:italic; padding-left:14px; border-left:2px solid rgba(111,207,138,.3); }
+
+  /* Answer block */
+  .answer-block { margin-bottom:16px; }
+
+  /* Guess sections */
+  .guess-section { margin-bottom:24px; padding-bottom:24px; border-bottom:1px solid rgba(111,207,138,.08); }
+  .guess-section:last-child { border-bottom:none; padding-bottom:0; }
+  .guess-section-title {
+    font-family:'Cinzel Decorative',serif; font-size:10px; letter-spacing:3px; color:var(--gold);
+    text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;
+  }
+  .guess-section-title::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,rgba(201,168,76,.25),transparent); }
+
+  /* Red flag zone */
+  .redflag-zone {
+    background:linear-gradient(135deg,var(--red-dark),rgba(50,15,15,.5));
+    border:1px solid var(--red-border); border-radius:10px; padding:18px; margin-top:20px;
+  }
+  .redflag-zone label { color:var(--red-label); }
+  .redflag-zone textarea { border-color:rgba(220,80,80,.25); }
+  .redflag-zone textarea:focus { border-color:rgba(220,80,80,.5); box-shadow:0 0 0 3px rgba(220,80,80,.08); }
+  .redflag-title {
+    font-family:'Cinzel Decorative',serif; font-size:10px; letter-spacing:3px;
+    color:var(--red-label); text-transform:uppercase; margin-bottom:10px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .redflag-title::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,rgba(220,80,80,.3),transparent); }
+
+  /* Step dots */
+  .phase-step-indicator { display:flex; gap:6px; justify-content:center; margin-bottom:24px; }
+  .step-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:rgba(111,207,138,.15); border:1px solid rgba(111,207,138,.25); transition:all .3s;
+  }
+  .step-dot.active { background:var(--glow-green); box-shadow:0 0 8px rgba(111,207,138,.5); border-color:var(--glow-green); }
+  .step-dot.done { background:var(--moss); border-color:var(--fern); }
+
+  /* Reveal */
+  .reveal-question-header {
+    font-family:'Cinzel Decorative',serif; font-size:10px; letter-spacing:3px;
+    color:var(--gold); text-transform:uppercase; margin-bottom:6px;
+  }
+  .reveal-nav { display:flex; justify-content:space-between; align-items:center; margin-top:24px; gap:12px; flex-wrap:wrap; }
+  .reveal-counter { font-size:12px; color:var(--text-dim); }
+
+  .player-reveal-block { margin-bottom:28px; padding-bottom:28px; border-bottom:1px solid rgba(111,207,138,.08); }
+  .player-reveal-block:last-child { border-bottom:none; padding-bottom:0; margin-bottom:0; }
+  .player-reveal-name {
+    font-family:'Cinzel Decorative',serif; font-size:11px; letter-spacing:2px;
+    color:var(--gold-light); text-transform:uppercase; margin-bottom:12px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .player-reveal-name::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,rgba(201,168,76,.2),transparent); }
+
+  .reveal-answer-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media(max-width:520px){ .reveal-answer-grid { grid-template-columns:1fr; } }
+
+  .reveal-card {
+    background:rgba(13,26,18,.6); border:1px solid rgba(111,207,138,.12);
+    border-radius:10px; padding:14px; animation:fadeUp .35s ease forwards; opacity:0;
+  }
+  .reveal-card.self-card { border-color:rgba(201,168,76,.25); background:rgba(40,32,10,.4); }
+  .reveal-card-name {
+    font-family:'Cinzel Decorative',serif; font-size:9px; letter-spacing:2px;
+    color:var(--text-dim); text-transform:uppercase; margin-bottom:8px;
+  }
+  .reveal-card.self-card .reveal-card-name { color:var(--gold); }
+  .reveal-card-answer { font-size:14px; font-style:italic; color:var(--text-main); line-height:1.5; }
+
+  /* Red flag reveal */
+  .redflag-reveal-card {
+    background:var(--red-dark); border:1px solid var(--red-border); border-radius:10px;
+    padding:16px; margin-bottom:12px; animation:fadeUp .4s ease forwards; opacity:0;
+  }
+  .redflag-reveal-card:nth-child(1){animation-delay:.05s}
+  .redflag-reveal-card:nth-child(2){animation-delay:.15s}
+  .redflag-reveal-card:nth-child(3){animation-delay:.25s}
+  .redflag-reveal-card:nth-child(4){animation-delay:.35s}
+  .redflag-reveal-card:nth-child(5){animation-delay:.45s}
+  .redflag-reveal-name {
+    font-family:'Cinzel Decorative',serif; font-size:9px; letter-spacing:2px;
+    color:var(--red-label); text-transform:uppercase; margin-bottom:8px;
+  }
+  .redflag-reveal-text { font-size:15px; font-style:italic; color:var(--red-text); line-height:1.6; }
+
+  hr.forest { border:none; border-top:1px solid rgba(111,207,138,.1); margin:20px 0; }
+
+  /* Questions list */
+  .questions-list { list-style:none; }
+  .questions-list li {
+    padding:8px 0; border-bottom:1px solid rgba(111,207,138,.07);
+    font-size:14px; color:var(--text-dim); display:flex; align-items:flex-start; gap:10px;
+  }
+  .questions-list li:last-child { border-bottom:none; }
+  .questions-list li::before { content:'✦'; color:var(--gold); font-size:10px; margin-top:4px; flex-shrink:0; }
+
+  /* History */
+  .history-session { border:1px solid rgba(111,207,138,.12); border-radius:10px; margin-bottom:12px; overflow:hidden; }
+  .history-session-header {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 16px; cursor:pointer; background:rgba(45,92,62,.15); transition:background .2s;
+  }
+  .history-session-header:hover { background:rgba(45,92,62,.3); }
+  .history-date { font-size:13px; color:var(--wisp); }
+  .history-toggle { color:var(--glow-green); font-size:14px; }
+  .history-session-body { padding:16px; }
+  .history-round { margin-bottom:20px; padding-bottom:20px; border-bottom:1px solid rgba(111,207,138,.08); }
+  .history-round:last-child { border-bottom:none; padding-bottom:0; margin-bottom:0; }
+  .history-question { font-style:italic; color:var(--wisp); font-size:15px; margin-bottom:12px; padding-left:12px; border-left:2px solid rgba(111,207,138,.25); }
+  .history-player-block { margin-bottom:12px; }
+  .history-answer-name { font-family:'Cinzel Decorative',serif; font-size:9px; letter-spacing:2px; color:var(--text-dim); text-transform:uppercase; margin-bottom:3px; margin-top:6px; }
+  .history-answer-name.self { color:var(--gold); }
+  .history-answer-text { font-size:14px; font-style:italic; color:var(--text-main); padding:7px 12px; background:rgba(13,26,18,.4); border-radius:6px; line-height:1.5; }
+  .history-answer-text.self { background:rgba(40,32,10,.4); border:1px solid rgba(201,168,76,.1); }
+  .history-redflag-name { font-family:'Cinzel Decorative',serif; font-size:9px; letter-spacing:2px; color:var(--red-label); text-transform:uppercase; margin-bottom:3px; margin-top:8px; }
+  .history-redflag-text { font-size:14px; font-style:italic; color:var(--red-text); padding:7px 12px; background:rgba(80,20,20,.3); border-radius:6px; border:1px solid var(--red-border); }
+
+  /* Screens */
+  .screen { display:none; }
+  .screen.active { display:block; }
+  .hidden { display:none !important; }
+  .empty-state { text-align:center; padding:24px; color:var(--text-dim); font-style:italic; font-size:14px; }
+
+  /* End */
+  .round-summary { text-align:center; padding:32px; }
+  .round-summary h2 { font-family:'Cinzel Decorative',serif; font-size:20px; color:var(--gold-light); margin-bottom:8px; }
+  .round-summary p { color:var(--text-dim); margin-bottom:24px; }
+
+  /* Toast */
+  .toast {
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:rgba(45,92,62,.95); border:1px solid rgba(111,207,138,.3);
+    border-radius:8px; padding:10px 20px; font-size:14px; color:var(--wisp);
+    opacity:0; transition:all .3s; z-index:100; white-space:nowrap; backdrop-filter:blur(8px);
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="fireflies" id="fireflies"></div>
+
+<div class="container">
+
+  <!-- SETUP -->
+  <div id="setup-screen" class="screen active">
+    <div class="header">
+      <div class="eyebrow">✦ A Game of Reflections ✦</div>
+      <h1>The Forest Mirror</h1>
+      <div class="divider"><div class="divider-line"></div><span style="color:var(--gold)">◆</span><div class="divider-line"></div></div>
+      <p class="subtitle">How do you see yourself — and how does the forest see you?</p>
+    </div>
+    <div class="card">
+      <div class="card-label">🌿 Players</div>
+      <div id="player-tags" class="player-tags"></div>
+      <div class="add-row">
+        <input type="text" id="player-input" placeholder="Add a player name..." maxlength="30"/>
+        <button class="btn btn-ghost btn-sm" onclick="addPlayer()">+ Add</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">📜 Questions</div>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">Every player answers every question about themselves — and guesses for everyone else.</p>
+      <ul class="questions-list" id="questions-list"></ul>
+      <div class="add-row" style="margin-top:12px;">
+        <input type="text" id="question-input" placeholder="Add a custom question..."/>
+        <button class="btn btn-ghost btn-sm" onclick="addQuestion()">+ Add</button>
+      </div>
+      <div class="btn-row" style="justify-content:flex-start;margin-top:14px;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="loadDefaults()">Load defaults</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearQuestions()">Clear all</button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('history-screen');renderHistory();">📜 Past Sessions</button>
+      <button class="btn btn-gold" onclick="startGame()">✦ Begin the Ritual</button>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game-screen" class="screen">
+
+    <!-- Phase 1: Self answers -->
+    <div id="phase-self" class="hidden">
+      <div class="phase-step-indicator">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">🌙 Your Reflection</div>
+        <div class="subject-badge">
+          <span class="crown">♛</span>
+          <span class="sname" id="self-player-name">Player</span>
+        </div>
+        <div class="phase-banner">
+          <span>🔒</span>
+          <span><strong id="self-player-name2">Player</strong> — answer privately. Everyone else, look away!</span>
+        </div>
+        <div id="self-questions-form"></div>
+        <div class="redflag-zone">
+          <div class="redflag-title">🚩 The Red Flag in Me</div>
+          <p style="font-size:13px;color:var(--text-dim);font-style:italic;margin-bottom:12px;line-height:1.6;">Not about shame — about self-awareness. One thing you know you're working on.</p>
+          <label>My red flag</label>
+          <textarea id="self-redflag" placeholder="e.g. My ADHD makes me talk over people sometimes..." rows="3"></textarea>
+        </div>
+        <div class="btn-row">
+          <div id="self-progress-label" style="font-size:12px;color:var(--text-dim);align-self:center;"></div>
+          <button class="btn btn-primary" onclick="lockSelfAnswers()">🌿 Seal My Answers</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 2: Guesses -->
+    <div id="phase-guesses" class="hidden">
+      <div class="phase-step-indicator">
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">🌲 Your Guesses</div>
+        <div class="subject-badge">
+          <span class="crown">♛</span>
+          <span class="sname" id="guess-player-name">Player</span>
+        </div>
+        <div class="phase-banner">
+          <span>✨</span>
+          <span><strong id="guess-player-name2">Player</strong> — what do you think everyone else would say?</span>
+        </div>
+        <div id="guess-form"></div>
+        <div class="btn-row">
+          <div id="guess-progress-label" style="font-size:12px;color:var(--text-dim);align-self:center;"></div>
+          <button class="btn btn-primary" onclick="lockGuesses()">🌿 Seal My Guesses</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 3: Reveal -->
+    <div id="phase-reveal" class="hidden">
+      <div class="phase-step-indicator">
+        <div class="step-dot done"></div>
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">🔮 The Reveal</div>
+        <div class="progress-row">
+          <div class="progress-bar"><div class="progress-fill" id="reveal-fill"></div></div>
+          <div class="progress-label" id="reveal-progress-label"></div>
+        </div>
+        <div id="reveal-content"></div>
+        <div class="reveal-nav">
+          <div class="reveal-counter" id="reveal-counter"></div>
+          <button class="btn btn-gold" onclick="nextReveal()" id="reveal-next-btn">Next →</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- END -->
+  <div id="end-screen" class="screen">
+    <div class="card">
+      <div class="round-summary">
+        <div style="font-size:40px;margin-bottom:16px;">🌿</div>
+        <h2>The Forest Has Spoken</h2>
+        <p>All reflections have been revealed. The mirror knows you now.</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="showScreen('history-screen');renderHistory();">📜 View History</button>
+          <button class="btn btn-ghost" onclick="exportLatestCSV()">⬇ Export CSV</button>
+          <button class="btn btn-gold" onclick="resetGame()">✦ Play Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="history-screen" class="screen">
+    <div class="header" style="margin-bottom:24px;">
+      <div class="eyebrow">✦ The Chronicles ✦</div>
+      <h1 style="font-size:clamp(18px,4vw,28px)">Past Reflections</h1>
+    </div>
+    <div class="card">
+      <div class="card-label">📜 Session History</div>
+      <div id="history-list"><div class="empty-state">Loading...</div></div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button class="btn btn-ghost btn-sm" onclick="exportAllCSV()">⬇ Export All as CSV</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearHistory()">Clear History</button>
+        <button class="btn btn-primary" onclick="showScreen('setup-screen')">← Back to Setup</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== CONFIG ==========
+const DEFAULT_PLAYERS = ['AceDarkin','Cinnie','Lattae','EightBitBella','RainingCupquake'];
+const DEFAULT_QUESTIONS = [
+  "What MBTI type do you think I am, and why?",
+  "What Pokémon do you think I would be, and why?",
+  "What video game do you think I would be, and why?",
+  "What Hogwarts house do you think I'm in, and why?",
+  "What DnD class do you think I would be?",
+  "What DnD alignment do you think I am?",
+  "What aesthetic fits me most? (e.g. cottagecore, dark academia, goblincore...)",
+  "If I were an NPC in an RPG, what would my role be?",
+  "What would my final boss theme song be?",
+  "If I were a drink, what would I be?",
+  "What's my love language?",
+  "What's a hobby you think I'd pick up and obsess over?",
+  "What era of my life do you think shaped me the most?",
+  "What rock or crystal do you think I would be, and why?",
+  "What season or type of weather do you think I am, and why?"
+];
+
+// ========== STATE ==========
+let players = [];
+let questions = [];
+let gameHistory = [];
+
+// selfAnswers[playerName] = { answers: { 0: "...", 1: "..." }, redFlag: "..." }
+// guessAnswers[guesserName][targetName][qIdx] = "..."
+let selfAnswers = {};
+let guessAnswers = {};
+let selfPhaseIdx = 0;
+let guessPhaseIdx = 0;
+let revealIdx = 0;
+
+// ========== FIREFLIES ==========
+(function(){
+  const c = document.getElementById('fireflies');
+  for(let i=0;i<18;i++){
+    const f = document.createElement('div');
+    f.className='firefly';
+    f.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${5+Math.random()*8}s;--delay:${-Math.random()*10}s;--dx:${(Math.random()-.5)*120}px;--dy:${(Math.random()-.5)*120}px;`;
+    c.appendChild(f);
+  }
+})();
+
+// ========== TOAST ==========
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ========== STORAGE (localStorage) ==========
+function saveSetup(){
+  try{ localStorage.setItem('fm:setup',JSON.stringify({players,questions})); }catch(e){}
+}
+function loadSetup(){
+  try{
+    const r=localStorage.getItem('fm:setup');
+    if(r){ const d=JSON.parse(r); players=d.players||[]; questions=d.questions||[]; }
+  }catch(e){}
+}
+function saveHistory(){
+  try{ localStorage.setItem('fm:history',JSON.stringify(gameHistory)); }catch(e){}
+}
+function loadHistoryData(){
+  try{
+    const r=localStorage.getItem('fm:history');
+    if(r) gameHistory=JSON.parse(r)||[];
+  }catch(e){ gameHistory=[]; }
+}
+function clearHistory(){
+  gameHistory=[];
+  try{ localStorage.removeItem('fm:history'); }catch(e){}
+  renderHistory(); showToast('History cleared ✦');
+}
+
+// ========== SETUP ==========
+function renderPlayers(){
+  const el=document.getElementById('player-tags');
+  el.innerHTML=players.length===0
+    ?'<div class="empty-state">No players yet ✦</div>'
+    :players.map((p,i)=>`<div class="player-tag">🌿 ${esc(p)}<span class="remove" onclick="removePlayer(${i})">×</span></div>`).join('');
+}
+function renderQuestions(){
+  const el=document.getElementById('questions-list');
+  el.innerHTML=questions.length===0
+    ?'<div class="empty-state">No questions yet ✦</div>'
+    :questions.map((q,i)=>`<li><span style="flex:1;color:var(--text-main)">${esc(q)}</span><span style="cursor:pointer;color:var(--text-dim);font-size:18px;padding-left:8px;" onclick="removeQuestion(${i})">×</span></li>`).join('');
+}
+function addPlayer(){
+  const inp=document.getElementById('player-input');
+  const n=inp.value.trim();
+  if(!n) return;
+  if(players.includes(n)){showToast('Name already exists');return;}
+  players.push(n); inp.value=''; renderPlayers(); saveSetup();
+}
+function removePlayer(i){ players.splice(i,1); renderPlayers(); saveSetup(); }
+function addQuestion(){
+  const inp=document.getElementById('question-input');
+  const q=inp.value.trim();
+  if(!q) return;
+  questions.push(q); inp.value=''; renderQuestions(); saveSetup();
+}
+function removeQuestion(i){ questions.splice(i,1); renderQuestions(); saveSetup(); }
+function loadDefaults(){ questions=[...DEFAULT_QUESTIONS]; renderQuestions(); saveSetup(); showToast('Questions loaded ✦'); }
+function clearQuestions(){ questions=[]; renderQuestions(); saveSetup(); }
+
+document.getElementById('player-input').addEventListener('keydown',e=>{if(e.key==='Enter')addPlayer();});
+document.getElementById('question-input').addEventListener('keydown',e=>{if(e.key==='Enter')addQuestion();});
+
+function init(){
+  loadSetup();
+  loadHistoryData();
+  if(players.length===0){players=[...DEFAULT_PLAYERS];saveSetup();}
+  if(questions.length<4){questions=[...DEFAULT_QUESTIONS];saveSetup();}
+  renderPlayers(); renderQuestions(); renderHistory();
+}
+init();
+
+// ========== SCREENS ==========
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showPhase(id){
+  ['phase-self','phase-guesses','phase-reveal'].forEach(p=>document.getElementById(p).classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// ========== START ==========
+function startGame(){
+  if(players.length<2){showToast('Add at least 2 players');return;}
+  if(questions.length===0){showToast('Add at least one question');return;}
+  selfAnswers={}; guessAnswers={};
+  selfPhaseIdx=0; guessPhaseIdx=0; revealIdx=0;
+  showScreen('game-screen');
+  startSelfPhase();
+}
+
+// ========== PHASE 1: SELF ==========
+function startSelfPhase(){
+  const player=players[selfPhaseIdx];
+  document.getElementById('self-player-name').textContent=player;
+  document.getElementById('self-player-name2').textContent=player;
+  document.getElementById('self-redflag').value='';
+  document.getElementById('self-progress-label').textContent=`Player ${selfPhaseIdx+1} of ${players.length}`;
+
+  const form=document.getElementById('self-questions-form');
+  form.innerHTML=questions.map((q,i)=>`
+    <div class="answer-block">
+      <label>${esc(q)}</label>
+      <textarea id="self-q-${i}" placeholder="Your honest answer..." rows="2"></textarea>
+    </div>
+  `).join('');
+
+  showPhase('phase-self');
+}
+
+function lockSelfAnswers(){
+  const player=players[selfPhaseIdx];
+  const answers={};
+  for(let i=0;i<questions.length;i++){
+    const val=document.getElementById(`self-q-${i}`).value.trim();
+    if(!val){showToast('Please answer all questions ✦');return;}
+    answers[i]=val;
+  }
+  const redFlag=document.getElementById('self-redflag').value.trim();
+  if(!redFlag){showToast('Write your red flag too 🚩');return;}
+
+  selfAnswers[player]={answers,redFlag};
+  selfPhaseIdx++;
+
+  if(selfPhaseIdx<players.length){
+    showToast(`${player}'s answers sealed 🔒`);
+    startSelfPhase();
+  } else {
+    showToast('All sealed! Now for the guesses ✨');
+    guessPhaseIdx=0;
+    startGuessPhase();
+  }
+}
+
+// ========== PHASE 2: GUESSES ==========
+function startGuessPhase(){
+  const guesser=players[guessPhaseIdx];
+  const others=players.filter(p=>p!==guesser);
+  document.getElementById('guess-player-name').textContent=guesser;
+  document.getElementById('guess-player-name2').textContent=guesser;
+  document.getElementById('guess-progress-label').textContent=`Player ${guessPhaseIdx+1} of ${players.length}`;
+
+  const form=document.getElementById('guess-form');
+  form.innerHTML=others.map(target=>`
+    <div class="guess-section">
+      <div class="guess-section-title">🌿 ${esc(target)}</div>
+      ${questions.map((q,i)=>`
+        <div class="answer-block">
+          <label>${esc(q)}</label>
+          <textarea id="guess-${escId(target)}-${i}" placeholder="What would ${esc(target.split(' ')[0])} say?..." rows="2"></textarea>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+
+  showPhase('phase-guesses');
+}
+
+function lockGuesses(){
+  const guesser=players[guessPhaseIdx];
+  const others=players.filter(p=>p!==guesser);
+  const guesses={};
+
+  for(const target of others){
+    guesses[target]={};
+    for(let i=0;i<questions.length;i++){
+      const val=document.getElementById(`guess-${escId(target)}-${i}`).value.trim();
+      if(!val){showToast(`Fill in all answers for ${target} ✦`);return;}
+      guesses[target][i]=val;
+    }
+  }
+
+  guessAnswers[guesser]=guesses;
+  guessPhaseIdx++;
+
+  if(guessPhaseIdx<players.length){
+    showToast(`${guesser}'s guesses sealed 🔒`);
+    startGuessPhase();
+  } else {
+    showToast('All guesses in! Time for the big reveal 🔮');
+    revealIdx=0;
+    startReveal();
+  }
+}
+
+// ========== PHASE 3: REVEAL ==========
+// slides = one per question, then one red flags slide
+function totalSlides(){ return questions.length+1; }
+
+function startReveal(){
+  showPhase('phase-reveal');
+  renderRevealSlide();
+}
+
+function renderRevealSlide(){
+  const total=totalSlides();
+  const pct=((revealIdx+1)/total)*100;
+  document.getElementById('reveal-fill').style.width=pct+'%';
+  document.getElementById('reveal-progress-label').textContent=`${revealIdx+1} of ${total}`;
+  document.getElementById('reveal-next-btn').textContent=revealIdx===total-1?'✦ End Game':'Next →';
+
+  const isRedFlags=revealIdx===questions.length;
+  document.getElementById('reveal-counter').textContent=isRedFlags
+    ?'Final Slide: Red Flags 🚩'
+    :`Question ${revealIdx+1} of ${questions.length}`;
+
+  const content=document.getElementById('reveal-content');
+
+  if(!isRedFlags){
+    const qi=revealIdx;
+    const q=questions[qi];
+    let html=`
+      <div class="reveal-question-header">Question ${qi+1}</div>
+      <div class="question-text">${esc(q)}</div>
+    `;
+
+    for(const player of players){
+      html+=`<div class="player-reveal-block"><div class="player-reveal-name">♛ ${esc(player)}</div><div class="reveal-answer-grid">`;
+
+      // Self answer
+      const selfAns=selfAnswers[player]?.answers[qi]||'—';
+      html+=`<div class="reveal-card self-card"><div class="reveal-card-name">♛ themselves</div><div class="reveal-card-answer">${esc(selfAns)}</div></div>`;
+
+      // Others' guesses about this player
+      for(const guesser of players){
+        if(guesser===player) continue;
+        const guess=guessAnswers[guesser]?.[player]?.[qi]||'—';
+        html+=`<div class="reveal-card"><div class="reveal-card-name">🌱 ${esc(guesser)} guessed</div><div class="reveal-card-answer">${esc(guess)}</div></div>`;
+      }
+
+      html+=`</div></div>`;
+    }
+
+    content.innerHTML=html;
+
+  } else {
+    // Red flags
+    let html=`
+      <div class="reveal-question-header" style="color:var(--red-label);">🚩 The Red Flag in Me</div>
+      <p style="font-size:14px;color:var(--text-dim);font-style:italic;margin-bottom:20px;line-height:1.6;">No judgment — only growth. 🌱</p>
+    `;
+    for(const player of players){
+      const rf=selfAnswers[player]?.redFlag||'—';
+      html+=`<div class="redflag-reveal-card"><div class="redflag-reveal-name">🚩 ${esc(player)}</div><div class="redflag-reveal-text">${esc(rf)}</div></div>`;
+    }
+    content.innerHTML=html;
+  }
+}
+
+function nextReveal(){
+  if(revealIdx===totalSlides()-1){
+    // Save to history
+    const session={
+      date:new Date().toISOString(),
+      players:[...players],
+      questions:[...questions],
+      selfAnswers:JSON.parse(JSON.stringify(selfAnswers)),
+      guessAnswers:JSON.parse(JSON.stringify(guessAnswers))
+    };
+    gameHistory.push(session);
+    saveHistory();
+    renderHistory();
+    showScreen('end-screen');
+  } else {
+    revealIdx++;
+    renderRevealSlide();
+  }
+}
+
+// ========== RESET ==========
+function resetGame(){
+  selfAnswers={}; guessAnswers={};
+  selfPhaseIdx=0; guessPhaseIdx=0; revealIdx=0;
+  renderPlayers(); renderQuestions();
+  showScreen('setup-screen');
+}
+
+// ========== HISTORY ==========
+function renderHistory(){
+  const el=document.getElementById('history-list');
+  if(!el) return;
+  if(gameHistory.length===0){
+    el.innerHTML='<div class="empty-state">No sessions yet — play a game to see history here ✦</div>';
+    return;
+  }
+  el.innerHTML=gameHistory.slice().reverse().map((session,si)=>{
+    const idx=gameHistory.length-1-si;
+    const date=new Date(session.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    const qs=session.questions||[];
+    return `
+      <div class="history-session">
+        <div class="history-session-header" onclick="toggleSession(${idx})">
+          <span class="history-date">🌿 ${date} — ${esc(session.players.join(', '))}</span>
+          <span class="history-toggle" id="toggle-${idx}">▾</span>
+        </div>
+        <div class="history-session-body hidden" id="session-${idx}">
+          ${qs.map((q,qi)=>`
+            <div class="history-round">
+              <div class="history-question">${esc(q)}</div>
+              ${session.players.map(player=>`
+                <div class="history-player-block">
+                  <div class="history-answer-name self">♛ ${esc(player)}</div>
+                  <div class="history-answer-text self">${esc(session.selfAnswers?.[player]?.answers?.[qi]||'—')}</div>
+                  ${session.players.filter(g=>g!==player).map(guesser=>`
+                    <div class="history-answer-name">🌱 ${esc(guesser)} guessed</div>
+                    <div class="history-answer-text">${esc(session.guessAnswers?.[guesser]?.[player]?.[qi]||'—')}</div>
+                  `).join('')}
+                </div>
+              `).join('')}
+            </div>
+          `).join('')}
+          <div class="history-round">
+            <div class="history-question" style="border-left-color:rgba(220,80,80,.3);">🚩 Red Flags</div>
+            ${session.players.map(player=>`
+              <div class="history-redflag-name">🚩 ${esc(player)}</div>
+              <div class="history-redflag-text">${esc(session.selfAnswers?.[player]?.redFlag||'—')}</div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleSession(idx){
+  const body=document.getElementById(`session-${idx}`);
+  const toggle=document.getElementById(`toggle-${idx}`);
+  body.classList.toggle('hidden');
+  toggle.textContent=body.classList.contains('hidden')?'▾':'▴';
+}
+
+// ========== CSV EXPORT ==========
+function csvCell(val) {
+  const s = String(val || '').replace(/"/g, '""');
+  return `"${s}"`;
+}
+
+function sessionToCSV(session) {
+  const qs = session.questions || [];
+  const ps = session.players || [];
+  const rows = [];
+  const date = new Date(session.date).toLocaleDateString('en-GB');
+
+  // Header row
+  rows.push(['Date', 'Question', 'Player', 'Type', 'Answered By', 'Answer'].map(csvCell).join(','));
+
+  for (let qi = 0; qi < qs.length; qi++) {
+    for (const player of ps) {
+      // Self answer
+      const selfAns = session.selfAnswers?.[player]?.answers?.[qi] || '';
+      rows.push([date, qs[qi], player, 'Self Answer', player, selfAns].map(csvCell).join(','));
+      // Others' guesses
+      for (const guesser of ps) {
+        if (guesser === player) continue;
+        const guess = session.guessAnswers?.[guesser]?.[player]?.[qi] || '';
+        rows.push([date, qs[qi], player, 'Guess', guesser, guess].map(csvCell).join(','));
+      }
+    }
+  }
+
+  // Red flags
+  for (const player of ps) {
+    const rf = session.selfAnswers?.[player]?.redFlag || '';
+    rows.push([date, '🚩 Red Flag', player, 'Red Flag', player, rf].map(csvCell).join(','));
+  }
+
+  return rows.join('\n');
+}
+
+function downloadCSV(content, filename) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV downloaded ✦');
+}
+
+function exportLatestCSV() {
+  if (gameHistory.length === 0) { showToast('No session to export'); return; }
+  const session = gameHistory[gameHistory.length - 1];
+  const date = new Date(session.date).toLocaleDateString('en-GB').replace(/\//g,'-');
+  downloadCSV(sessionToCSV(session), `forest-mirror-${date}.csv`);
+}
+
+function exportAllCSV() {
+  if (gameHistory.length === 0) { showToast('No sessions to export'); return; }
+  const allRows = [];
+  for (const session of gameHistory) {
+    const csv = sessionToCSV(session);
+    // Skip header for all but the first
+    const lines = csv.split('\n');
+    if (allRows.length === 0) {
+      allRows.push(...lines);
+    } else {
+      allRows.push(...lines.slice(1));
+    }
+    allRows.push(''); // blank row between sessions
+  }
+  downloadCSV(allRows.join('\n'), `forest-mirror-all-sessions.csv`);
+}
+
+// ========== UTILS ==========
+function esc(str){
+  if(!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escId(str){ return String(str).replace(/[^a-z0-9]/gi,'_'); }
+</script>
+</body>
+</html>
