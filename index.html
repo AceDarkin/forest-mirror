@@ -594,13 +594,7 @@ function showPickerPhase(){
 }
 
 function selectCurrentUser(name){
-  currentUserName=name;
-  // Put currentUser first in self phase order
-  const others=players.filter(p=>p!==name);
-  const orderedPlayers=[name,...others];
-  // Reorder selfPhaseIdx to use orderedPlayers
-  window._selfOrder=orderedPlayers;
-  selfPhaseIdx=0;
+  currentUserName = name;
   showToast(`Welcome, ${name}! 🌿`);
   startSelfPhase();
 }
@@ -697,10 +691,8 @@ function lockSelfAnswers(){
   const redFlag = document.getElementById('self-redflag').value.trim();
   if(!redFlag){showToast('Write your red flag too 🚩');return;}
 
-  selfAnswers[player]={answers, redFlag};
+  selfAnswers[player] = {answers, redFlag};
   showToast(`Answers sealed! Now guess for everyone else ✨`);
-  guessPhaseIdx=0;
-  window._guessOrder = players.filter(p => p !== currentUserName);
   startGuessPhase();
 }
 
@@ -837,7 +829,7 @@ function nextReveal(){
 function resetGame(){
   selfAnswers={}; guessAnswers={};
   selfPhaseIdx=0; guessPhaseIdx=0; revealIdx=0;
-  currentUserName=null; window._selfOrder=null; window._guessOrder=null;
+  currentUserName=null;
   renderPlayers(); renderQuestions();
   showScreen('setup-screen');
 }
